@@ -1,3 +1,34 @@
+﻿--[[-------------------------------------------------------------------------
+  Copyright (c) 2006-2008, Trond A Ekseth
+  All rights reserved.
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are
+  met:
+
+      * Redistributions of source code must retain the above copyright
+        notice, this list of conditions and the following disclaimer.
+      * Redistributions in binary form must reproduce the above
+        copyright notice, this list of conditions and the following
+        disclaimer in the documentation and/or other materials provided
+        with the distribution.
+      * Neither the name of oCD nor the names of its contributors may
+        be used to endorse or promote products derived from this
+        software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+---------------------------------------------------------------------------]]
+
 local db = {
 	spells = {
 		
@@ -226,28 +257,36 @@ local db = {
 		["Riptide"] = true,
 		["Reincarnation"] = true,		
 	},
+
 	items = {
-		[29370] = true,
-		[44014] = true,
+		--["Icon of the Silver Crescent"] = true,
+		--["Mana Emerald"] = true,
 	},
 	settings = {
 		-- statusbar
 		statusbar = {
-			size = 4,
 			point = "LEFT",
+			fill = true,
 			gradients = true,
 			orientation = "VERTICAL",
 			texture = [[Interface\AddOns\oCD\textures\smooth]],
 		},
 		frame = {
-			size = 30,
-			scale = 1,
+			width = 30,
+			height = 26,
+			scale = 0.9,
 			point = "TOP",
 			xOffset = 5,
-			yOffset = -5,
+			yOffset = -1,
 			columnSpacing = 0,
-			columnMax = 1,
-			columnAnchorPoint = "RIGHT",
+			columnMax = 12,
+			columnAnchorPoint = "LEFT",
+		},
+		timer = {
+			size = 11,
+		},
+		text = {
+			size = 11,
 		},
 	},
 }
@@ -275,8 +314,7 @@ local min = SPELL_RECAST_TIME_MIN:gsub("%%%.3g", "%(%%d+%%.?%%d*%)")
 local sec = SPELL_RECAST_TIME_SEC:gsub("%%%.3g", "%(%%d+%%.?%%d*%)")
 
 function addon:PLAYER_LOGIN()
-	self.group = self.display:RegisterGroup("oCD", "TOP", "UIErrorsFrame", "BOTTOM")
-
+	self.group = self.display:RegisterGroup("oCD", "CENTER", UIParent, -140, 170)
 	for k, v in pairs(db.settings) do
 		self.group[k] = v
 	end

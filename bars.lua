@@ -13,42 +13,6 @@ local L = {
 	["GROUP_EXISTS"] = "The group '%s' already exists.",
 }
 
-local backdrop = {
-	bgFile = "Interface\\ChatFrame\\ChatFrameBackground", tile = true, tileSize = 16,
-	edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 8,
-	insets = {left = 2, right = 2, top = 2, bottom = 2},
-}
-
-local BarOnUpdate = function()
-	return function(self, elapsed)
-		local duration = self.duration - elapsed
-		if(duration <= 0) then
-			self.group:UnregisterBar(self.id)
-			return
-		end
-
-		local min, sec = floor(duration / 60), fmod(duration, 60)
-		if(min > 0) then
-			self.text:SetFormattedText("%d:%02d", min, sec)
-		elseif(sec < 10) then
-			self.text:SetFormattedText("%.1f", sec)
-		else
-			self.text:SetFormattedText("%d", sec)
-		end
-
-		local sb = self.sb
-		local percent = duration / self.max
-		-- Color gradient towards red
-		if(self.gradients) then
-			-- finalColor + (currentColor - finalColor) * percentLeft
-			sb:SetStatusBarColor(1.0 + (self.r - 1.0) * percent, self.g * percent, self.b * percent)
-		end
-
-		self.duration = duration
-		sb:SetValue(duration)
-	end
-end
-
 local function getFrame()
 	-- Check for an unused bar
 	if( #(framePool) > 0 ) then
@@ -58,33 +22,129 @@ local function getFrame()
 	local frame = CreateFrame"Frame"
 	frame:Hide()
 	frame:SetParent(UIParent)
-	frame:SetBackdrop(backdrop)
+	frame:SetBackdrop{
+		bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", tile = true, tileSize = 16,
+		edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 8,
+		insets = {left = 4, right = 4, top = 4, bottom = 4},
+	}
 	frame:SetBackdropColor(0, 0, 0)
-	frame:SetBackdropBorderColor(0, 0, 0)
-
+	frame:SetBackdropBorderColor(1, 1, 1)
+	frame:SetFrameStrata("BACKGROUND")
+	--cd gloss texture
+		local gloss = frame:CreateTexture(nil,"Overlay")
+		gloss:SetTexture("Interface\\Addons\\vMinimap\\textures\\glazzed64.tga")
+	    gloss:SetPoint("TOPLEFT", frame, "TOPLEFT", 2, -2)
+	    gloss:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -2, 2)
+		  --apply user alpha
+		  local r,g,b,a = gloss:GetVertexColor()
+		  gloss:SetVertexColor(r,g,b,a)
+	
+	
 	local cd = CreateFrame"Cooldown"
+	--cd.noomnicc = true
 	cd.noCooldownCount = true
 	cd:SetParent(frame)
-	cd:SetPoint("RIGHT", -2, 0)
+	-- local glosscd = cd:CreateTexture(nil,"Overlay")
+		-- glosscd:SetTexture("Interface\\Addons\\vMinimap\\textures\\glazzed64.tga")
+	    -- glosscd:SetPoint("TOPLEFT", cd, "TOPLEFT", 2, -2)
+	    -- glosscd:SetPoint("BOTTOMRIGHT", cd, "BOTTOMRIGHT", -2, 2)
+	cd:SetBackdrop{
+		bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", tile = true, tileSize = 16,
+		edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 6,
+		insets = {left = 3, right = 3, top = 3, bottom = 3},
+	}
+	cd:SetBackdropColor(0, 0, 0, 0)
+	cd:SetBackdropBorderColor(1, 1, 1)
+	cd:SetFrameStrata("BACKGROUND")	
+		
 
-	local font, size = GameFontNormalSmall:GetFont()
+	local font, size = GameFontNormal:GetFont()
 	local text = cd:CreateFontString()
-	text:SetFont(font, size, 'OUTLINE')
 	text:SetDrawLayer"OVERLAY"
-	text:SetTextColor(1, 1, 1)
-	text:SetPoint("BOTTOM", cd, 1, 1)
+	--text:SetFont(font, size, "OUTLINE")
+	text:SetFont(font, 10, "OUTLINE")
+	text:SetTextColor(188/255, 188/255, 188/255)
+	-- text:SetPoint("BOTTOM", frame, 1, -2)
+	text:SetPoint("LEFT", frame, "RIGHT", 0, 0)
+	text:SetJustifyH("LEFT")
 
 	local icon = cd:CreateTexture()
 	icon:SetDrawLayer"BACKGROUND"
 	icon:SetTexCoord(.07, .93, .07, .93)
+	icon:ClearAllPoints()
 	icon:SetAllPoints(cd)
 
 	local sb = CreateFrame"StatusBar"
 	sb:SetParent(frame)
-	sb:SetPoint('LEFT', 2, 0)
-	sb:SetPoint('RIGHT', cd, 'LEFT')
+	sb:SetMinMaxValues(0, 1)
+	
+	-- All the Children Are Dead
+	local OnUpdate
+	do
+		-- OnUpdate for a bar
+		local frequency, timer, forced = 1, 0, true -- first update == LE FORCED!
+		local secondsLeft, startSeconds
+		local fill, gradients, min, sec, percent
+		function OnUpdate(self, elapsed)
+			timer = timer + elapsed
 
-	frame:SetScript('OnUpdate', BarOnUpdate())
+			if(timer >= frequency or forced) then
+				-- Check if times ran out and that we need to start fading it out
+				secondsLeft = secondsLeft - timer
+				if(secondsLeft <= 0) then
+					frequency = 1
+					self.group:UnregisterBar(self.id)
+					return
+				end
+
+				min, sec = floor(secondsLeft / 60), fmod(secondsLeft, 60)
+				if(min > 0) then
+					text:SetFormattedText("%d:%02d", min, sec)
+					text:SetTextColor(188/255, 188/255, 188/255)
+				elseif(sec < 10) then
+					frequency = .05
+					text:SetFormattedText("%.1f", sec)
+					text:SetTextColor(188/255, 188/255, 188/255)
+					if(sec < 4) then
+						text:SetTextColor(.98, .38, .09)
+					end
+				else
+					text:SetFormattedText("%d", sec)
+					text:SetTextColor(188/255, 188/255, 188/255)
+				end
+		        
+				percent = secondsLeft / startSeconds
+				-- Color gradient towards red
+				if(gradients) then
+					-- finalColor + (currentColor - finalColor) * percentLeft
+					sb:SetStatusBarColor(1.0 + (self.r - 1.0) * percent, self.g * percent, self.b * percent)
+				end
+
+				-- Now update the actual displayed bar
+				if(fill) then
+					sb:SetValue(1-percent)
+				else
+					sb:SetValue(percent)
+				end
+
+				timer = 0
+				if(forced) then forced = nil end
+			end
+		end
+
+		frame.SetVars = function(s, sl, gr, f)
+			if(s) then
+				startSeconds = s
+				secondsLeft = sl
+				forced = true
+			end
+
+			gradients = gr
+			fill = f
+		end
+	end
+
+	frame:SetScript("OnUpdate", OnUpdate)
 
 	frame.update = update
 	frame.cd = cd
@@ -105,7 +165,7 @@ end
 
 -- Reposition the group
 local function sortBars(a, b)
-	return a.duration > b.duration
+	return a.endTime > b.endTime
 end
 
 local function getRelativePointAnchor(point)
@@ -235,17 +295,31 @@ local display = {
 		-- So we can do sorting and positioning
 		table.insert(group.usedBars, frame)
 
-		local fSize = group.frame.size
-		local sbSize, sbPoint = group.statusbar.size, group.statusbar.point
-		frame:SetWidth(fSize + sbSize + 6)
-		frame:SetHeight(fSize + 3)
+		-- Grab basic info about the font
+		local path, size, style = GameFontHighlight:GetFont()
+		local textSize = group.text.size
+		local timerSize = group.timer.size
 
-		frame.cd:SetWidth(fSize)
-		frame.cd:SetHeight(fSize)
+		local width, height, point = group.frame.width, group.frame.height, group.statusbar.point
+		local mod = (point == "LEFT" and 1) or -1
+		frame:SetWidth(width)
+		frame:SetHeight(height)
+
+		frame.cd:ClearAllPoints()
+		frame.cd:SetPoint(point == "LEFT" and "RIGHT" or "LEFT", -3*mod, 0)
+		frame.cd:SetPoint("TOP", 0, -3)
+		frame.cd:SetPoint("BOTTOM", 0, 3)
+		frame.cd:SetPoint(point == "LEFT" and "LEFT" or "RIGHT", (width-height+3)*mod, 0)
 
 		local sb = frame.sb
-		sb:SetHeight(fSize)
-		sb:SetWidth(sbSize)
+		sb:SetPoint("TOP", frame, 0, -3)
+		sb:SetPoint("BOTTOM", 0, 3)
+		sb:SetPoint(point == "LEFT" and "LEFT" or "RIGHT", 3*mod, 0)
+		if(point == "LEFT") then
+			sb:SetPoint("RIGHT", frame.cd, "LEFT")
+		else
+			sb:SetPoint("LEFT", frame.cd, "RIGHT")
+		end
 		sb:SetOrientation(group.statusbar.orientation)
 
 		-- Set info the bar needs to know
@@ -253,13 +327,14 @@ local display = {
 		frame.g = g or group.baseColor.g
 		frame.b = b or group.baseColor.b
 		frame.group = group
-
-		local duration = startTime - GetTime() + seconds
-		frame.duration = duration
-		frame.max = seconds
-
+		frame.endTime = startTime + seconds
+		frame.secondsLeft = startTime - GetTime() + seconds
+		frame.startSeconds = seconds
 		frame.gradients = group.statusbar.gradients
+		frame.fill = group.statusbar.fill
 		frame.id = id
+
+		frame.SetVars(seconds, frame.secondsLeft, group.statusbar.gradients, group.statusbar.fill)
 
 		-- Reset last update.
 		group.lastUpdate = 0
@@ -270,8 +345,7 @@ local display = {
 		frame.icon:SetTexture(icon)
 		sb:SetStatusBarTexture(group.statusbar.texture)
 		sb:SetStatusBarColor(frame.r, frame.g, frame.b)
-		sb:SetMinMaxValues(0, seconds)
-		sb:SetValue(duration)
+		sb:SetValue(group.statusbar.fill and 0 or 1)
 		frame.cd:SetCooldown(startTime, seconds)
 		frame:Show()
 
